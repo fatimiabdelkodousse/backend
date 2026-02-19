@@ -1,9 +1,9 @@
 package com.app.controller;
 
 import com.app.dto.*;
+import com.app.entity.Image;
 import com.app.service.AdminService;
 import com.app.service.ImageService;
-import com.app.entity.Image;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,7 +26,6 @@ public class AdminController {
     @Autowired
     private ImageService imageService;
 
-    // ==================== Create User ====================
     @PostMapping("/users/create")
     public ResponseEntity<ApiResponse<UserDTO>> createUser(
             @Valid @RequestBody CreateUserRequest request) {
@@ -40,7 +39,6 @@ public class AdminController {
         }
     }
 
-    // ==================== Get All Users ====================
     @GetMapping("/users")
     public ResponseEntity<ApiResponse<List<UserDTO>>> getAllUsers() {
         try {
@@ -53,7 +51,6 @@ public class AdminController {
         }
     }
 
-    // ==================== Delete User ====================
     @DeleteMapping("/users/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteUser(
             @PathVariable Long id) {
@@ -67,7 +64,6 @@ public class AdminController {
         }
     }
 
-    // ==================== Toggle User ====================
     @PutMapping("/users/{id}/toggle")
     public ResponseEntity<ApiResponse<UserDTO>> toggleUser(
             @PathVariable Long id) {
@@ -81,30 +77,27 @@ public class AdminController {
         }
     }
 
-    // ==================== Upload Image ====================
     @PostMapping("/image/upload")
     public ResponseEntity<ApiResponse<Image>> uploadImage(
             @RequestParam("file") MultipartFile file,
             Authentication authentication,
             HttpServletRequest request) {
         try {
-            String uploadedBy = authentication.getName();
-            Image image = imageService.uploadImage(file, uploadedBy);
-
+            Image image = imageService.uploadImage(
+                file, authentication.getName());
             String baseUrl = request.getScheme() + "://"
                     + request.getServerName() + ":"
                     + request.getServerPort();
-            image.setFilePath(baseUrl + "/uploads/" + image.getFileName());
-
+            image.setFilePath(
+                baseUrl + "/uploads/" + image.getFileName());
             return ResponseEntity.ok(
-                ApiResponse.success("تم رفع الصورة بنجاح", image));
+                ApiResponse.success("تم رفع الصورة", image));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                 .body(ApiResponse.error(e.getMessage()));
         }
     }
 
-    // ==================== Today Image ====================
     @GetMapping("/image/today")
     public ResponseEntity<ApiResponse<Image>> getTodayImage() {
         return imageService.getTodayImage()
@@ -112,20 +105,5 @@ public class AdminController {
                 ApiResponse.success("صورة اليوم", image)))
             .orElse(ResponseEntity.ok(
                 ApiResponse.<Image>error("لا توجد صورة اليوم")));
-    }
-
-    // ==================== Send Message ====================
-    @PostMapping("/messages/send")
-    public ResponseEntity<ApiResponse<Void>> sendMessage(
-            @Valid @RequestBody SendMessageRequest request,
-            Authentication authentication) {
-        try {
-            // messageService.sendMessage(authentication.getName(), request);
-            return ResponseEntity.ok(
-                ApiResponse.success("تم إرسال الرسالة بنجاح"));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                .body(ApiResponse.error(e.getMessage()));
-        }
     }
 }
