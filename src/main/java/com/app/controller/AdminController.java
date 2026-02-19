@@ -1,6 +1,8 @@
 package com.app.controller;
 
 import com.app.dto.ApiResponse;
+import com.app.service.MessageService;
+import com.app.dto.SendMessageRequest;
 import com.app.dto.CreateUserRequest;
 import com.app.entity.Image;
 import com.app.entity.User;
@@ -107,6 +109,24 @@ public class AdminController {
         try {
             adminService.deleteUser(id);
             return ResponseEntity.ok(ApiResponse.success("تم حذف المستخدم بنجاح"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+    
+    @Autowired
+    private MessageService messageService;
+
+    // ==================== إرسال رسالة ====================
+    @PostMapping("/messages/send")
+    public ResponseEntity<ApiResponse<Void>> sendMessage(
+            @Valid @RequestBody SendMessageRequest request,
+            Authentication authentication) {
+        try {
+            messageService.sendMessage(authentication.getName(), request);
+            return ResponseEntity.ok(
+                    ApiResponse.success("تم إرسال الرسالة بنجاح"));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error(e.getMessage()));

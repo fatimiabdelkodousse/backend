@@ -1,7 +1,6 @@
 package com.app.controller;
 
 import com.app.dto.*;
-import com.app.entity.FcmToken;
 import com.app.entity.Image;
 import com.app.service.*;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,6 +10,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import com.app.entity.NotificationSettings;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/user")
@@ -97,5 +98,63 @@ public class UserController {
         return request.getScheme() + "://"
                 + request.getServerName() + ":"
                 + request.getServerPort();
+    }
+    
+ // أضف هذا في UserController.java
+
+    @Autowired
+    private MessageService messageService;
+
+    // ==================== جلب الرسائل ====================
+    @GetMapping("/messages")
+    public ResponseEntity<ApiResponse<List<MessageResponse>>> getMessages(
+            Authentication auth) {
+        List<MessageResponse> messages =
+                messageService.getUserMessages(auth.getName());
+        return ResponseEntity.ok(ApiResponse.success("Messages", messages));
+    }
+
+    // ==================== عدد الغير مقروء ====================
+    @GetMapping("/messages/unread-count")
+    public ResponseEntity<ApiResponse<Long>> getUnreadCount(
+            Authentication auth) {
+        long count = messageService.getUnreadCount(auth.getName());
+        return ResponseEntity.ok(ApiResponse.success("Unread count", count));
+    }
+
+    // ==================== تحديد كمقروء ====================
+    @PutMapping("/messages/{id}/read")
+    public ResponseEntity<ApiResponse<Void>> markAsRead(
+            @PathVariable Long id, Authentication auth) {
+        messageService.markAsRead(id, auth.getName());
+        return ResponseEntity.ok(ApiResponse.success("Marked as read"));
+    }
+
+    // ==================== تحديد الكل كمقروء ====================
+    @PutMapping("/messages/read-all")
+    public ResponseEntity<ApiResponse<Void>> markAllAsRead(
+            Authentication auth) {
+        messageService.markAllAsRead(auth.getName());
+        return ResponseEntity.ok(ApiResponse.success("All marked as read"));
+    }
+
+    // ==================== جلب إعدادات الإشعارات ====================
+    @GetMapping("/notifications/settings")
+    public ResponseEntity<ApiResponse<NotificationSettings>> getSettings(
+            Authentication auth) {
+        NotificationSettings settings =
+                messageService.getSettings(auth.getName());
+        return ResponseEntity.ok(ApiResponse.success("Settings", settings));
+    }
+
+    // ==================== تحديث إعدادات الإشعارات ====================
+    @PutMapping("/notifications/settings")
+    public ResponseEntity<ApiResponse<NotificationSettings>> updateSettings(
+            @RequestBody NotificationSettingsRequest request,
+            Authentication auth) {
+        NotificationSettings settings =
+                messageService.updateSettings(auth.getName(), request);
+        return ResponseEntity.ok(
+                ApiResponse.success("Settings updated", settings));
     }
 }

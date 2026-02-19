@@ -2,6 +2,8 @@ package com.app.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.ArrayList;
 
 @Entity
 @Table(name = "users")
@@ -43,6 +45,17 @@ public class User {
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
+    }
+    
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    private List<FcmToken> fcmTokens = new ArrayList<>();
+
+    // Getter
+    public List<FcmToken> getFcmTokens() { return fcmTokens; }
+
+    // Setter
+    public void setFcmTokens(List<FcmToken> fcmTokens) {
+        this.fcmTokens = fcmTokens;
     }
 
     // ==================== Constructors ====================
