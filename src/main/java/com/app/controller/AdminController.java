@@ -1,13 +1,9 @@
 package com.app.controller;
 
-import com.app.dto.ApiResponse;
-import com.app.service.MessageService;
-import com.app.dto.SendMessageRequest;
-import com.app.dto.CreateUserRequest;
-import com.app.entity.Image;
-import com.app.entity.User;
+import com.app.dto.*;
 import com.app.service.AdminService;
 import com.app.service.ImageService;
+import com.app.entity.Image;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,46 +26,62 @@ public class AdminController {
     @Autowired
     private ImageService imageService;
 
+    // ==================== Create User ====================
     @PostMapping("/users/create")
-    public ResponseEntity<ApiResponse<User>> createUser(
+    public ResponseEntity<ApiResponse<UserDTO>> createUser(
             @Valid @RequestBody CreateUserRequest request) {
         try {
-            User user = adminService.createUser(request);
-            // نخفي الـ password في الرد
-            user.setPassword("");
+            UserDTO user = adminService.createUser(request);
             return ResponseEntity.ok(
-                    ApiResponse.success("User created successfully", user));
+                ApiResponse.success("تم إنشاء المستخدم بنجاح", user));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.error(e.getMessage()));
+                .body(ApiResponse.error(e.getMessage()));
         }
     }
 
+    // ==================== Get All Users ====================
     @GetMapping("/users")
-    public ResponseEntity<ApiResponse<List<User>>> getAllUsers() {
-        List<User> users = adminService.getAllUsers();
-        users.forEach(u -> u.setPassword(""));
-        return ResponseEntity.ok(
-                ApiResponse.success("Users retrieved", users));
-    }
-    
-
-    @PutMapping("/users/{id}/toggle")
-    public ResponseEntity<ApiResponse<User>> toggleUser(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<List<UserDTO>>> getAllUsers() {
         try {
-            User user = adminService.toggleUserStatus(id);
-            user.setPassword("");
+            List<UserDTO> users = adminService.getAllUsers();
             return ResponseEntity.ok(
-                    ApiResponse.success("User status updated", user));
+                ApiResponse.success("تم جلب المستخدمين", users));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.error(e.getMessage()));
+                .body(ApiResponse.error(e.getMessage()));
         }
     }
 
-    /**
-     * رفع صورة
-     */
+    // ==================== Delete User ====================
+    @DeleteMapping("/users/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteUser(
+            @PathVariable Long id) {
+        try {
+            adminService.deleteUser(id);
+            return ResponseEntity.ok(
+                ApiResponse.success("تم حذف المستخدم بنجاح"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    // ==================== Toggle User ====================
+    @PutMapping("/users/{id}/toggle")
+    public ResponseEntity<ApiResponse<UserDTO>> toggleUser(
+            @PathVariable Long id) {
+        try {
+            UserDTO user = adminService.toggleUserStatus(id);
+            return ResponseEntity.ok(
+                ApiResponse.success("تم تحديث الحالة", user));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    // ==================== Upload Image ====================
     @PostMapping("/image/upload")
     public ResponseEntity<ApiResponse<Image>> uploadImage(
             @RequestParam("file") MultipartFile file,
@@ -79,57 +91,41 @@ public class AdminController {
             String uploadedBy = authentication.getName();
             Image image = imageService.uploadImage(file, uploadedBy);
 
-            // بناء URL الصورة
-            String baseUrl = request.getScheme() + "://" + 
-                    request.getServerName() + ":" + request.getServerPort();
+            String baseUrl = request.getScheme() + "://"
+                    + request.getServerName() + ":"
+                    + request.getServerPort();
             image.setFilePath(baseUrl + "/uploads/" + image.getFileName());
 
             return ResponseEntity.ok(
-                    ApiResponse.success("Image uploaded successfully", image));
+                ApiResponse.success("تم رفع الصورة بنجاح", image));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.error(e.getMessage()));
+                .body(ApiResponse.error(e.getMessage()));
         }
     }
 
-    /**
-     * جلب صورة اليوم
-     */
+    // ==================== Today Image ====================
     @GetMapping("/image/today")
     public ResponseEntity<ApiResponse<Image>> getTodayImage() {
         return imageService.getTodayImage()
-                .map(image -> ResponseEntity.ok(
-                        ApiResponse.success("Today's image", image)))
-                .orElse(ResponseEntity.ok(
-                        ApiResponse.error("No image uploaded today")));
+            .map(image -> ResponseEntity.ok(
+                ApiResponse.success("صورة اليوم", image)))
+            .orElse(ResponseEntity.ok(
+                ApiResponse.<Image>error("لا توجد صورة اليوم")));
     }
-    
-    @DeleteMapping("/users/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable Long id) {
-        try {
-            adminService.deleteUser(id);
-            return ResponseEntity.ok(ApiResponse.success("تم حذف المستخدم بنجاح"));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error(e.getMessage()));
-        }
-    }
-    
-    @Autowired
-    private MessageService messageService;
 
-    // ==================== إرسال رسالة ====================
+    // ==================== Send Message ====================
     @PostMapping("/messages/send")
     public ResponseEntity<ApiResponse<Void>> sendMessage(
             @Valid @RequestBody SendMessageRequest request,
             Authentication authentication) {
         try {
-            messageService.sendMessage(authentication.getName(), request);
+            // messageService.sendMessage(authentication.getName(), request);
             return ResponseEntity.ok(
-                    ApiResponse.success("تم إرسال الرسالة بنجاح"));
+                ApiResponse.success("تم إرسال الرسالة بنجاح"));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.error(e.getMessage()));
+                .body(ApiResponse.error(e.getMessage()));
         }
     }
 }

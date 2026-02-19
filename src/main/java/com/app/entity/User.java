@@ -1,9 +1,10 @@
 package com.app.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "users")
@@ -17,6 +18,7 @@ public class User {
     private String email;
 
     @Column(nullable = false)
+    @JsonIgnore // ← مهم جداً - لا ترسل الـ password
     private String password;
 
     @Enumerated(EnumType.STRING)
@@ -26,7 +28,6 @@ public class User {
     @Column(nullable = false)
     private boolean enabled = true;
 
-    // ✅ إضافة حقل النقاط
     @Column(nullable = false)
     private int points = 0;
 
@@ -35,6 +36,11 @@ public class User {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    // ✅ أضف JsonIgnore لكل العلاقات
+    @JsonIgnore
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    private List<FcmToken> fcmTokens = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {
@@ -46,31 +52,18 @@ public class User {
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
-    
-    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
-    private List<FcmToken> fcmTokens = new ArrayList<>();
-
-    // Getter
-    public List<FcmToken> getFcmTokens() { return fcmTokens; }
-
-    // Setter
-    public void setFcmTokens(List<FcmToken> fcmTokens) {
-        this.fcmTokens = fcmTokens;
-    }
 
     // ==================== Constructors ====================
-
     public User() {}
 
     public User(String email, String password, Role role) {
-        this.email = email;
+        this.email  = email;
         this.password = password;
-        this.role = role;
+        this.role   = role;
         this.points = 0;
     }
 
     // ==================== Getters ====================
-
     public Long getId() { return id; }
     public String getEmail() { return email; }
     public String getPassword() { return password; }
@@ -79,9 +72,9 @@ public class User {
     public int getPoints() { return points; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public List<FcmToken> getFcmTokens() { return fcmTokens; }
 
     // ==================== Setters ====================
-
     public void setId(Long id) { this.id = id; }
     public void setEmail(String email) { this.email = email; }
     public void setPassword(String password) { this.password = password; }
@@ -90,4 +83,5 @@ public class User {
     public void setPoints(int points) { this.points = points; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public void setFcmTokens(List<FcmToken> fcmTokens) { this.fcmTokens = fcmTokens; }
 }

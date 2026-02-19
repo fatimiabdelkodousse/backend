@@ -1,6 +1,9 @@
 package com.app.service;
 
 import com.app.dto.CreateUserRequest;
+import com.app.dto.UserDTO;
+import com.app.entity.FcmToken;
+import com.app.entity.KarshAnswer;
 import com.app.entity.Role;
 import com.app.entity.User;
 import com.app.repository.FcmTokenRepository;
@@ -12,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class AdminService {
@@ -28,10 +32,11 @@ public class AdminService {
     @Autowired
     private KarshAnswerRepository karshAnswerRepository;
 
-    public User createUser(CreateUserRequest request) {
+    // ==================== Create User ====================
+    public UserDTO createUser(CreateUserRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException(
-                "البريد الإلكتروني مستخدم مسبقاً: " + request.getEmail());
+                "البريد الإلكتروني مستخدم مسبقاً");
         }
 
         User user = new User();
@@ -39,42 +44,67 @@ public class AdminService {
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(Role.ROLE_USER);
         user.setEnabled(true);
-        user.setPoints(0); // ← النقاط تبدأ من صفر
+        user.setPoints(0);
 
-        return userRepository.save(user);
+        User saved = userRepository.save(user);
+        return toDTO(saved);
     }
 
-    public List<User> getAllUsers() {
-        return userRepository.findByRole(Role.ROLE_USER);
+    // ==================== Get All Users ====================
+    public List<UserDTO> getAllUsers() {
+        return userRepository.findByRole(Role.ROLE_USER)
+                .stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
     }
 
+    // ==================== Delete User ====================
     @Transactional
     public void deleteUser(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() ->
+                    new RuntimeException("المستخدم غير موجود"));
 
         if (user.getRole() == Role.ROLE_ADMIN) {
             throw new RuntimeException("لا يمكن حذف حساب الأدمن");
         }
 
-        // ✅ حذف FCM Tokens أولاً
-        List<com.app.entity.FcmToken> tokens =
+        // حذف FCM Tokens
+        List<FcmToken> tokens =
                 fcmTokenRepository.findByUserAndActiveTrue(user);
         fcmTokenRepository.deleteAll(tokens);
 
-        // ✅ حذف إجابات الكرش
-        List<com.app.entity.KarshAnswer> answers =
+        // حذف إجابات الكرش
+        List<KarshAnswer> answers =
                 karshAnswerRepository.findByUser(user);
         karshAnswerRepository.deleteAll(answers);
 
-        // ✅ حذف المستخدم
+        // حذف المستخدم
         userRepository.delete(user);
     }
 
-    public User toggleUserStatus(Long userId) {
+    // ==================== Toggle Status ====================
+    public UserDTO toggleUserStatus(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() ->
+                    new RuntimeException("المستخدم غير موجود"));
         user.setEnabled(!user.isEnabled());
-        return userRepository.save(user);
+        return toDTO(userRepository.save(user));
+    }
+
+    // ==================== Convert to DTO ====================
+    private UserDTO toDTO(User user) {
+        UserDTO dto = new UserDTO();
+        dto.setId(user.getId());
+        dto.setEmail(user.getEmail());
+        dto.setRole(user.getRole().name());
+        dto.setEnabled(user.isEnabled());
+        dto.setPoints(user.getPoints());
+        dto.setCreatedAt(
+            user.getCreatedAt() != null
+                ? user.getCreatedAt().toString()
+                : ""
+        );
+        return dto;
     }
 }
