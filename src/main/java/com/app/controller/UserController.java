@@ -1,13 +1,9 @@
 package com.app.controller;
 
-import com.app.dto.ApiResponse;
-import com.app.dto.FcmTokenRequest;
-import com.app.dto.PrayerTimeResponse;
+import com.app.dto.*;
+import com.app.entity.FcmToken;
 import com.app.entity.Image;
-import com.app.service.FcmService;
-import com.app.service.ImageService;
-import com.app.service.IpLocationService;
-import com.app.service.PrayerTimeService;
+import com.app.service.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,27 +29,29 @@ public class UserController {
     @Autowired
     private IpLocationService ipLocationService;
 
-    /**
-     * جلب وقت المغرب حسب IP المستخدم
-     */
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private KarshService karshService;
+
+    // ✅ جلب مواقيت الصلاة
     @GetMapping("/prayer-times")
     public ResponseEntity<ApiResponse<PrayerTimeResponse>> getPrayerTimes(
             HttpServletRequest request) {
-        String ipAddress = ipLocationService.extractIpFromRequest(request);
-        PrayerTimeResponse response = prayerTimeService.getPrayerTimesByIp(ipAddress);
-        return ResponseEntity.ok(
-                ApiResponse.success("Prayer times retrieved", response));
+        String ip = ipLocationService.extractIpFromRequest(request);
+        PrayerTimeResponse response = prayerTimeService.getPrayerTimesByIp(ip);
+        return ResponseEntity.ok(ApiResponse.success("Prayer times", response));
     }
 
-    /**
-     * جلب صورة اليوم
-     */
+    // ✅ جلب صورة اليوم
     @GetMapping("/image/today")
-    public ResponseEntity<ApiResponse<Image>> getTodayImage(HttpServletRequest request) {
+    public ResponseEntity<ApiResponse<Image>> getTodayImage(
+            HttpServletRequest request) {
         return imageService.getTodayImage()
                 .map(image -> {
-                    String baseUrl = getBaseUrl(request);
-                    image.setFilePath(baseUrl + "/uploads/" + image.getFileName());
+                    String base = getBaseUrl(request);
+                    image.setFilePath(base + "/uploads/" + image.getFileName());
                     return ResponseEntity.ok(
                             ApiResponse.success("Today's image", image));
                 })
@@ -61,21 +59,34 @@ public class UserController {
                         ApiResponse.<Image>error("No image for today")));
     }
 
-    /**
-     * تسجيل FCM Token
-     */
+    // ✅ تسجيل FCM Token
     @PostMapping("/fcm/register")
     public ResponseEntity<ApiResponse<Void>> registerFcmToken(
-            @Valid @RequestBody FcmTokenRequest tokenRequest,
-            Authentication authentication) {
+            @Valid @RequestBody FcmTokenRequest req,
+            Authentication auth) {
+        fcmService.saveOrUpdateToken(
+                auth.getName(), req.getToken(), req.getDeviceType());
+        return ResponseEntity.ok(ApiResponse.success("FCM token registered"));
+    }
+
+    // ✅ جلب ملف المستخدم مع النقاط
+    @GetMapping("/profile")
+    public ResponseEntity<ApiResponse<UserProfileResponse>> getProfile(
+            Authentication auth) {
+        UserProfileResponse profile = userService.getUserProfile(auth.getName());
+        return ResponseEntity.ok(ApiResponse.success("Profile", profile));
+    }
+
+    // ✅ إرسال إجابة سؤال الكرش
+    @PostMapping("/karsh/answer")
+    public ResponseEntity<ApiResponse<KarshAnswerResponse>> submitKarshAnswer(
+            @Valid @RequestBody KarshAnswerRequest request,
+            Authentication auth) {
         try {
-            String userEmail = authentication.getName();
-            fcmService.saveOrUpdateToken(
-                    userEmail,
-                    tokenRequest.getToken(),
-                    tokenRequest.getDeviceType()
-            );
-            return ResponseEntity.ok(ApiResponse.success("FCM token registered"));
+            KarshAnswerResponse response =
+                    karshService.submitAnswer(auth.getName(), request);
+            return ResponseEntity.ok(
+                    ApiResponse.success("Answer submitted", response));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error(e.getMessage()));
@@ -83,8 +94,8 @@ public class UserController {
     }
 
     private String getBaseUrl(HttpServletRequest request) {
-        return request.getScheme() + "://" + 
-               request.getServerName() + ":" + 
-               request.getServerPort();
+        return request.getScheme() + "://"
+                + request.getServerName() + ":"
+                + request.getServerPort();
     }
 }

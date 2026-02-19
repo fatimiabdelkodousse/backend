@@ -28,9 +28,6 @@ public class AdminController {
     @Autowired
     private ImageService imageService;
 
-    /**
-     * إنشاء مستخدم جديد
-     */
     @PostMapping("/users/create")
     public ResponseEntity<ApiResponse<User>> createUser(
             @Valid @RequestBody CreateUserRequest request) {
@@ -46,9 +43,6 @@ public class AdminController {
         }
     }
 
-    /**
-     * جلب قائمة المستخدمين
-     */
     @GetMapping("/users")
     public ResponseEntity<ApiResponse<List<User>>> getAllUsers() {
         List<User> users = adminService.getAllUsers();
@@ -56,24 +50,8 @@ public class AdminController {
         return ResponseEntity.ok(
                 ApiResponse.success("Users retrieved", users));
     }
+    
 
-    /**
-     * حذف مستخدم
-     */
-    @DeleteMapping("/users/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable Long id) {
-        try {
-            adminService.deleteUser(id);
-            return ResponseEntity.ok(ApiResponse.success("User deleted"));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error(e.getMessage()));
-        }
-    }
-
-    /**
-     * تفعيل/تعطيل مستخدم
-     */
     @PutMapping("/users/{id}/toggle")
     public ResponseEntity<ApiResponse<User>> toggleUser(@PathVariable Long id) {
         try {
@@ -122,5 +100,16 @@ public class AdminController {
                         ApiResponse.success("Today's image", image)))
                 .orElse(ResponseEntity.ok(
                         ApiResponse.error("No image uploaded today")));
+    }
+    
+    @DeleteMapping("/users/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable Long id) {
+        try {
+            adminService.deleteUser(id);
+            return ResponseEntity.ok(ApiResponse.success("تم حذف المستخدم بنجاح"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        }
     }
 }
